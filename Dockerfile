@@ -9,7 +9,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=on
 ENV PIP_DEFAULT_TIMEOUT=100
 
 RUN apt-get update
-RUN apt-get install -y \
+RUN apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python-dev \
@@ -18,14 +18,13 @@ RUN apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /code/bot /code/config
+ADD . /code
 WORKDIR /code
 
-RUN mkdir -p /code
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-ADD requirements.txt /code
-RUN pip3 install -r requirements.txt
-
-ADD bot /code/bot
-ADD config /code/config
+VOLUME ./bot:/code/bot
+VOLUME ./config:/code/config
 
 CMD ["bash"]
