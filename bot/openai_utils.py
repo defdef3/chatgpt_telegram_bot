@@ -187,3 +187,10 @@ class ChatGPT:
 async def transcribe_audio(audio_file):
     r = await openai.Audio.atranscribe("whisper-1", audio_file)
     return r["text"]
+
+async def generate_image(prompt):
+    try:
+        r = openai.Image.create(prompt=prompt, n=1, size="512x512")
+        return r["data"][0]["url"]
+    except openai.error.InvalidRequestError:
+        return None
