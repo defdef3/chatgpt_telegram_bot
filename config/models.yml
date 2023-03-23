@@ -4,10 +4,10 @@ info:
   gpt-3.5-turbo:
     type: chat_completion
     name: ChatGPT
-    description: ChatGPT is that well-known model. It's <b>fast</b> and <b>cheap</b>. Ideal for everyday tasks. If there are some tasks it can't handle, try the <b>GPT-4</b>.
+    description: ChatGPT - это та самая известная модель. Она <b>быстрая</b>. Идеально подходит для выполнения повседневных задач. Если есть какие-то задачи, с которыми он не может справиться, попробуйте воспользоваться функцией <b>GPT-4</b>.
 
-    price_per_1000_input_tokens: 0.002
-    price_per_1000_output_tokens: 0.002
+    price_per_1000_input_tokens: 0.000
+    price_per_1000_output_tokens: 0.000
 
     scores:
       Smart: 3
@@ -17,10 +17,10 @@ info:
   gpt-4:
     type: chat_completion
     name: GPT-4
-    description: GPT-4 is the <b>smartest</b> and most advanced model in the world. But it is slower and not as cost-efficient as ChatGPT. Best choice for <b>complex</b> intellectual tasks.
+    description: GPT-4 <b>самая умная</b> и самая передовая модель в мире. Но она медленнее чем ChatGPT. Лучший выбор для <b>комплексных</b> интеллектуальных задач.
 
-    price_per_1000_input_tokens: 0.03
-    price_per_1000_output_tokens: 0.06
+    price_per_1000_input_tokens: 0.00
+    price_per_1000_output_tokens: 0.00
 
     scores:
       Smart: 5
@@ -30,10 +30,10 @@ info:
   text-davinci-003:
     type: completion
     name: GPT-3.5
-    description: GPT-3.5 is a legacy model. Actually there is <b>no reason to use it</b>, because it is more expensive and slower than ChatGPT, but just about as smart.
+    description: GPT-3.5 является устаревшей моделью. Actually there is <b>no reason to use it</b>, because it is more expensive and slower than ChatGPT, but just about as smart.
 
-    price_per_1000_input_tokens: 0.02
-    price_per_1000_output_tokens: 0.02
+    price_per_1000_input_tokens: 0.00
+    price_per_1000_output_tokens: 0.00
 
     scores:
       Smart: 3
@@ -42,4 +42,4 @@ info:
 
   whisper:
     type: audio
-    price_per_1_min: 0.006
+    price_per_1_min: 0.000
