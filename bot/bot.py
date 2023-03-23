@@ -43,6 +43,7 @@ HELP_MESSAGE = """Комманды:
 ⚪ /retry – Повторный запрос ответа на предыдущий запрос
 ⚪ /new – Начать новый диалог
 ⚪ /mode – Выбор режима
+⚪ /imagine <запрос> – Генерация изображения
 ⚪ /settings – Настройки
 ⚪ /help – Помощь
 """
@@ -287,6 +288,33 @@ async def voice_message_handle(update: Update, context: CallbackContext):
     await message_handle(update, context, message=transcribed_text)
 
 
+async def image_generation_handle(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    user_id = update.message.from_user.id
+    db.set_user_attribute(user_id, "last_interaction", datetime.now())
+
+    if len(context.args) == 0:
+        await update.message.reply_text("Укажите запрос")
+        return
+
+    # get image caption
+    caption = " ".join(context.args)
+
+    # generate image
+    image_url = await openai_utils.generate_image(caption)
+
+    if image_url is None:
+        await update.message.reply_text("Что-то пошло не так во время генерации изображения. Возможно, ваш запрос не разрешен системой безопасности openai.")
+        return
+
+    # send image
+    await update.message.reply_photo(image_url, caption=caption)
+
+    # normalize dollars to tokens (it's very convenient to measure everything in a single unit)
+   # db.set_user_attribute(user_id, "n_used_tokens", config.dalle_price_per_image + db.get_user_attribute(user_id, "n_used_tokens"))
+    
+    
+    
 async def new_dialog_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     if await is_previous_message_not_answered_yet(update, context): return
@@ -495,7 +523,7 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
-
+    application.add_handler(CommandHandler("imagine", image_generation_handle, filters=user_filter))
   #  application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
     
     application.add_error_handler(error_handle)
