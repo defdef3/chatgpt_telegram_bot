@@ -39,8 +39,8 @@ db = database.Database()
 logger = logging.getLogger(__name__)
 user_semaphores = {}
 
-HELP_MESSAGE = """Commands:
-⚪ /retry – Повторить последний запрос
+HELP_MESSAGE = """Комманды:
+⚪ /retry – Повторный запрос ответа на предыдущий запрос
 ⚪ /new – Начать новый диалог
 ⚪ /mode – Выбор режима
 ⚪ /settings – Настройки
@@ -196,7 +196,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
                     try:                    
                         sent_message = await update.message.reply_text(answer, parse_mode=parse_mode)
                     except telegram.error.BadRequest as e:
-                        if str(e).startswith("Message must be non-empty"):  # first answer chunk from openai was empty
+                        if str(e).startswith("Сообщение должно быть непустым"):  # first answer chunk from openai was empty
                             i = -1  # try again to send first message
                             continue
                         else:
@@ -228,7 +228,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
 
             db.update_n_used_tokens(user_id, current_model, n_input_tokens, n_output_tokens) 
         except Exception as e:
-            error_text = f"Something went wrong during completion. Reason: {e}"
+            error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
             logger.error(error_text)
             await update.message.reply_text(error_text)
             return
@@ -247,7 +247,7 @@ async def is_previous_message_not_answered_yet(update: Update, context: Callback
 
     user_id = update.message.from_user.id
     if user_semaphores[user_id].locked():
-        text = "⏳ Please <b>wait</b> for a reply to the previous message"
+        text = "⏳ Пожалуйста, <b>подождите</b> ответа на предыдущее сообщение"
         await update.message.reply_text(text, reply_to_message_id=update.message.id, parse_mode=ParseMode.HTML)
         return True
     else:
@@ -452,16 +452,16 @@ async def error_handle(update: Update, context: CallbackContext) -> None:
                 # answer has invalid characters, so we send it without parse_mode
                 await context.bot.send_message(update.effective_chat.id, message_chunk)
     except:
-        await context.bot.send_message(update.effective_chat.id, "Some error in error handler")
+        await context.bot.send_message(update.effective_chat.id, "Некоторая ошибка в обработчике")
 
 async def post_init(application: Application):
     await application.bot.set_my_commands([
-        BotCommand("/new", "Start new dialog"),
-        BotCommand("/mode", "Select chat mode"),
-        BotCommand("/retry", "Re-generate response for previous query"),
-    #    BotCommand("/balance", "Show balance"),
-        BotCommand("/settings", "Show settings"),
-        BotCommand("/help", "Show help message"),
+        BotCommand("/new", "Начать новый диалог"),
+        BotCommand("/mode", "Выбрать режим"),
+        BotCommand("/retry", "Повторный запрос ответа на предыдущий запрос"),
+    #   BotCommand("/balance", "Show balance"),
+        BotCommand("/settings", "Настройки"),
+        BotCommand("/help", "Помощь"),
     ])
 
 def run_bot() -> None:
