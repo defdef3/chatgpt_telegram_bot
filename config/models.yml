@@ -12,7 +12,7 @@ info:
     scores:
       Smart: 3
       Fast: 5
-      Cheap: 5
+ #     Cheap: 5
 
   gpt-4:
     type: chat_completion
@@ -25,7 +25,7 @@ info:
     scores:
       Smart: 5
       Fast: 2
-      Cheap: 2
+ #     Cheap: 2
 
   text-davinci-003:
     type: completion
@@ -38,7 +38,7 @@ info:
     scores:
       Smart: 3
       Fast: 2
-      Cheap: 3
+#      Cheap: 3
 
   whisper:
     type: audio
