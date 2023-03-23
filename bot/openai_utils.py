@@ -190,7 +190,7 @@ async def transcribe_audio(audio_file):
 
 async def generate_image(prompt):
     try:
-        r = openai.Image.create(prompt=prompt, n=1, size="512x512")
+        r = openai.Image.create(prompt=prompt, n=1, size="1024x1024")
         return r["data"][0]["url"]
     except openai.error.InvalidRequestError:
         return None
