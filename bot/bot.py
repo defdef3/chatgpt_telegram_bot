@@ -298,7 +298,8 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
     if len(context.args) == 0:
-        await update.message.reply_text("Укажите запрос в формате '/image <ваш запрос>'")
+        await update.message.reply_text("Введите запрос...'")
+        caption = update.message.text
         return
 
     # get image caption
@@ -493,7 +494,7 @@ async def post_init(application: Application):
         BotCommand("/retry", "Повторный запрос ответа на предыдущий запрос"),
         BotCommand("/image", "Генерация картинок Dalle2 (1024x1024)"),
         BotCommand("/settings", "Настройки"),
-        BotCommand("/help", "Помощь"),
+      #  BotCommand("/help", "Помощь"),
     ])
 
 def run_bot() -> None:
@@ -514,7 +515,7 @@ def run_bot() -> None:
         user_filter = filters.User(username=usernames) | filters.User(user_id=user_ids)
 
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
-    application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
+  #  application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
     application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
