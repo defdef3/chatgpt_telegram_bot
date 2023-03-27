@@ -298,7 +298,6 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     
     if len(context.args) == 0:
         await update.message.reply_text("Введите запрос...")
-        caption = " ".join(message)
         caption = " ".join(update.message.text)
         return
 
