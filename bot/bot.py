@@ -297,13 +297,15 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
+    # get image caption
+    caption = " ".join(context.args)      
+    
     if len(context.args) == 0:
-        await update.message.reply_text("Введите запрос...'")
-        caption = update.message.text
+        await update.message.reply_text("Введите запрос...")
+        caption = await update.message.text
         return
 
-    # get image caption
-    caption = " ".join(context.args)
+
 
     # generate image
     image_url = await openai_utils.generate_image(caption)
@@ -313,6 +315,7 @@ async def image_generation_handle(update: Update, context: CallbackContext):
         return
 
     # send image
+    await update.message.chat.send_action(action="upload_photo")
     await update.message.reply_photo(image_url, caption=caption)
 
     # normalize dollars to tokens (it's very convenient to measure everything in a single unit)
