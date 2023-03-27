@@ -493,9 +493,9 @@ async def error_handle(update: Update, context: CallbackContext) -> None:
 async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand("/new", "Начать новый диалог"),
-        BotCommand("/mode", "Выбрать режим"),
-        BotCommand("/retry", "Повторный запрос ответа на предыдущий запрос"),
+        BotCommand("/mode", "Выбрать роль"),
         BotCommand("/image", "Генерация картинок Dalle2 (1024x1024)"),
+        BotCommand("/retry", "Повторный запрос ответа на предыдущий запрос"),
         BotCommand("/settings", "Настройки"),
       #  BotCommand("/help", "Помощь"),
     ])
