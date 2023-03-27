@@ -43,11 +43,7 @@ HELP_MESSAGE = """Комманды:
 ⚪ /retry – Повторный запрос ответа на предыдущий запрос
 ⚪ /new – Начать новый диалог
 ⚪ /mode – Выбор режима
-<<<<<<< HEAD
-⚪ /image <запрос> – Генерация изображения
-=======
 ⚪ /image {запрос} – Генерация изображения
->>>>>>> 714f474... Генерация изображения Dalle2
 ⚪ /settings – Настройки
 ⚪ /help – Помощь
 """
@@ -302,7 +298,7 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     
     if len(context.args) == 0:
         await update.message.reply_text("Введите запрос...")
-        await update.message.text
+        caption = " ".join(message)
         caption = " ".join(update.message.text)
         return
 
@@ -495,7 +491,7 @@ async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand("/new", "Начать новый диалог"),
         BotCommand("/mode", "Выбрать роль"),
-        BotCommand("/image", "Генерация картинок Dalle2 (1024x1024)"),
+        BotCommand("/image", "Генерация картинок Dalle2"),
         BotCommand("/retry", "Повторный запрос ответа на предыдущий запрос"),
         BotCommand("/settings", "Настройки"),
       #  BotCommand("/help", "Помощь"),
