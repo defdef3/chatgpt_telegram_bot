@@ -22,6 +22,7 @@ from telegram.ext import (
     ApplicationBuilder,
     CallbackContext,
     CommandHandler,
+    ConversationHandler,
     MessageHandler,
     CallbackQueryHandler,
     AIORateLimiter,
@@ -298,15 +299,16 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     
     if len(context.args) == 0:
         await update.message.reply_text("Введите запрос...")
-        try:
-            message = message or update.message.text
-            caption = message
-        #caption = " ".join(update.message.text)
-        except Exception as e:
-            error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
-            logger.error(error_text)
-            await update.message.reply_text(error_text)
-        return
+        return 1
+   #     try:
+   #         message = message or update.message.text
+   #         caption = message
+   #     #caption = " ".join(update.message.text)
+   #     except Exception as e:
+   #         error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
+   #         logger.error(error_text)
+   #         await update.message.reply_text(error_text)
+   #     return
 
     # generate image
     image_url = await openai_utils.generate_image(caption)
@@ -322,7 +324,26 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     # normalize dollars to tokens (it's very convenient to measure everything in a single unit)
    # db.set_user_attribute(user_id, "n_used_tokens", config.dalle_price_per_image + db.get_user_attribute(user_id, "n_used_tokens"))
     
+async def caption_image(update: Update, context: CallbackContext):
+    try:
+        caption = " ".join(update.message.text) or " ".join(context.args) 
+    except Exception as e:
+        error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
+        logger.error(error_text)
+        await update.message.reply_text(error_text)
+        
+    image_url = await openai_utils.generate_image(caption)
+
+    if image_url is None:
+        await update.message.reply_text("Что-то пошло не так во время генерации изображения. Возможно, ваш запрос не разрешен системой безопасности Openai.")
+        return
+
+    # send image
+    await update.message.chat.send_action(action="upload_photo")
+    await update.message.reply_photo(image_url, caption=caption)            
     
+    return ConversationHandler.END
+
     
 async def new_dialog_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
@@ -532,7 +553,8 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
-    application.add_handler(CommandHandler("image", image_generation_handle, filters=user_filter))
+  #  application.add_handler(CommandHandler("image", image_generation_handle, filters=user_filter))
+    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={1: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]},fallbacks=[]))
   #  application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
     
     application.add_error_handler(error_handle)
