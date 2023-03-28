@@ -298,10 +298,15 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     
     if len(context.args) == 0:
         await update.message.reply_text("Введите запрос...")
-        caption = " ".join(update.message.text)
+        try:
+            message = message or update.message.text
+            caption = message
+        #caption = " ".join(update.message.text)
+        except Exception as e:
+            error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
+            logger.error(error_text)
+            await update.message.reply_text(error_text)
         return
-
-
 
     # generate image
     image_url = await openai_utils.generate_image(caption)
