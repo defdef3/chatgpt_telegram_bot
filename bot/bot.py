@@ -294,12 +294,10 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
-    # get image caption
-    caption = " ".join(context.args)      
-    
+           
     if len(context.args) == 0:
         await update.message.reply_text("Введите запрос...")
-        return 1
+        return caption_image
    #     try:
    #         message = message or update.message.text
    #         caption = message
@@ -310,6 +308,9 @@ async def image_generation_handle(update: Update, context: CallbackContext):
    #         await update.message.reply_text(error_text)
    #     return
 
+
+ # get image caption
+    caption = " ".join(context.args)  
     # generate image
     image_url = await openai_utils.generate_image(caption)
 
@@ -325,8 +326,12 @@ async def image_generation_handle(update: Update, context: CallbackContext):
    # db.set_user_attribute(user_id, "n_used_tokens", config.dalle_price_per_image + db.get_user_attribute(user_id, "n_used_tokens"))
     
 async def caption_image(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    user_id = update.message.from_user.id
+    db.set_user_attribute(user_id, "last_interaction", datetime.now())
+    caption = update.message.text
     try:
-        caption = " ".join(update.message.text) or " ".join(context.args) 
+        caption = update.message.text
     except Exception as e:
         error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
         logger.error(error_text)
@@ -554,7 +559,7 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
   #  application.add_handler(CommandHandler("image", image_generation_handle, filters=user_filter))
-    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={1: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]},fallbacks=[]))
+    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={caption_image: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]},fallbacks=[]))
   #  application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
     
     application.add_error_handler(error_handle)
