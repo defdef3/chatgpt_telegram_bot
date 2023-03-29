@@ -447,7 +447,7 @@ async def set_settings_handle(update: Update, context: CallbackContext):
 
     text, reply_markup = get_settings_menu(user_id)
     try:                    
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+        await query.edit_message_text(text, reply_markup=None, parse_mode=ParseMode.HTML)
     except telegram.error.BadRequest as e:
         if str(e).startswith("Сообщение не изменено"):
             pass
