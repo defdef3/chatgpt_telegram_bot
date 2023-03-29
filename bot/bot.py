@@ -40,6 +40,9 @@ db = database.Database()
 logger = logging.getLogger(__name__)
 user_semaphores = {}
 
+FIRST = range(1)
+
+
 HELP_MESSAGE = """Комманды:
 ⚪ /retry – Повторный запрос ответа на предыдущий запрос
 ⚪ /new – Начать новый диалог
@@ -297,7 +300,7 @@ async def image_generation_handle(update: Update, context: CallbackContext):
            
     if len(context.args) == 0:
         await update.message.reply_text("Введите запрос...")
-        return caption_image
+        return FIRST
    #     try:
    #         message = message or update.message.text
    #         caption = message
@@ -376,7 +379,7 @@ async def show_chat_modes_handle(update: Update, context: CallbackContext):
         keyboard.append([InlineKeyboardButton(chat_mode_dict["name"], callback_data=f"set_chat_mode|{chat_mode}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Select chat mode:", reply_markup=reply_markup)
+    await update.message.reply_text("Выберите роль:", reply_markup=reply_markup)
 
 
 async def set_chat_mode_handle(update: Update, context: CallbackContext):
@@ -446,7 +449,7 @@ async def set_settings_handle(update: Update, context: CallbackContext):
     try:                    
         await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
     except telegram.error.BadRequest as e:
-        if str(e).startswith("Message is not modified"):
+        if str(e).startswith("Сообщение не изменено"):
             pass
     
 
@@ -546,6 +549,7 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
   #  application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
+    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={FIRST: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]},fallbacks=[]))
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
     application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
@@ -559,7 +563,7 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("settings", settings_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_settings_handle, pattern="^set_settings"))
   #  application.add_handler(CommandHandler("image", image_generation_handle, filters=user_filter))
-    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={caption_image: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]},fallbacks=[]))
+    
   #  application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
     
     application.add_error_handler(error_handle)
