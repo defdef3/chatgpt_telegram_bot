@@ -297,36 +297,53 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
-           
     if len(context.args) == 0:
         await update.message.reply_text("Введите запрос...")
         return FIRST
-   #     try:
-   #         message = message or update.message.text
-   #         caption = message
-   #     #caption = " ".join(update.message.text)
-   #     except Exception as e:
-   #         error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
-   #         logger.error(error_text)
-   #         await update.message.reply_text(error_text)
-   #     return
+
+    prompt = " ".join(context.args)
+    image_url = None
+    
+    while True:
+        if image_url is None:
+            await update.message.chat.send_action(action="typing")
+            image_url = await openai_utils.generate_image(prompt)
+        
+            if image_url is None:
+                await update.message.reply_text("Что-то пошло не так во время генерации изображения. Возможно, ваш запрос не разрешен системой безопасности Openai.")
+                return
+        
+            buttons = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("Retry", callback_data='retry'),
+                    InlineKeyboardButton("Another prompt", callback_data='another_prompt'),
+                    InlineKeyboardButton("Cancel", callback_data='cancel')
+                ]
+            ])
+            await update.message.chat.send_action(action="upload_photo")
+            await update.message.reply_photo(image_url, caption=prompt, reply_markup=buttons)
+            return
+
+        try:
+            response = await update.callback_query_handler(callback_query_handler, timeout=60)
+            
+            if response == "retry":
+                image_url = None
+            elif response == "another_prompt":
+                await update.callback_query.edit_message_text(text="Введите запрос...")
+                return FIRST
+            else:
+                await update.callback_query.edit_message_text(text="До свидания!")
+                return ConversationHandler.END
+        except asyncio.TimeoutError:
+            await update.callback_query.edit_message_text(text="Время ожидания истекло, попробуйте еще раз.")
+            image_url = None
 
 
- # get image caption
-    caption = " ".join(context.args)  
-    # generate image
-    image_url = await openai_utils.generate_image(caption)
-
-    if image_url is None:
-        await update.message.reply_text("Что-то пошло не так во время генерации изображения. Возможно, ваш запрос не разрешен системой безопасности Openai.")
-        return
-
-    # send image
-    await update.message.chat.send_action(action="upload_photo")
-    await update.message.reply_photo(image_url, caption=caption)
-
-    # normalize dollars to tokens (it's very convenient to measure everything in a single unit)
-   # db.set_user_attribute(user_id, "n_used_tokens", config.dalle_price_per_image + db.get_user_attribute(user_id, "n_used_tokens"))
+async def callback_query_handler(update: Update, context: CallbackContext):
+    query = update.callback_query.data
+    await update.callback_query.answer()
+    return query
     
 async def caption_image(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
