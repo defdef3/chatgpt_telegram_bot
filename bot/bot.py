@@ -333,6 +333,7 @@ async def caption_image(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
     caption = update.message.text
+    await update.message.chat.send_action(action="typing")
     try:
         caption = update.message.text
     except Exception as e:
@@ -447,7 +448,8 @@ async def set_settings_handle(update: Update, context: CallbackContext):
 
     text, reply_markup = get_settings_menu(user_id)
     try:                    
-        await query.edit_message_text(text, reply_markup=None, parse_mode=ParseMode.HTML)
+        await query.edit_message_text(f"Текущая версия: {model_key}", reply_markup=None, parse_mode=ParseMode.HTML)
+       # await query.edit_message_text(f"Текущая версия: {model_key}", parse_mode=ParseMode.HTML)
     except telegram.error.BadRequest as e:
         if str(e).startswith("Сообщение не изменено"):
             pass
