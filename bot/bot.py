@@ -300,50 +300,58 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     if len(context.args) == 0:
         await update.message.reply_text("Введите запрос...")
         return FIRST
-
-    prompt = " ".join(context.args)
-    image_url = None
     
-    while True:
+    caption = " ".join(context.args)
+    image_url = await openai_utils.generate_image(caption)
+
+    if image_url is None:
+        await update.message.reply_text("Что-то пошло не так во время генерации изображения. Возможно, ваш запрос не разрешен системой безопасности Openai.")
+        return
+    
+    # create inline keyboard with buttons for user interaction
+    keyboard = [[InlineKeyboardButton('Retry', callback_data='retry')],
+                [InlineKeyboardButton('Another prompt', callback_data='new_prompt')],
+                [InlineKeyboardButton('Cancel', callback_data='cancel')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # send image with inline keyboard
+    await update.effective_chat.send_photo(
+        photo=image_url,
+        caption=caption,
+        reply_markup=reply_markup,
+        timeout=30
+    )
+    
+    return ConversationHandler.END
+
+async def button_click_handle(update: Update, context: CallbackContext):
+    query = update.callback_query
+    user_response = query.data
+    
+    # handle button click based on user response
+    if user_response == 'retry':
+        # generate image with same caption
+        caption = query.message.caption
+        image_url = await openai_utils.generate_image(caption)
+        
         if image_url is None:
-            await update.message.chat.send_action(action="typing")
-            image_url = await openai_utils.generate_image(prompt)
-        
-            if image_url is None:
-                await update.message.reply_text("Что-то пошло не так во время генерации изображения. Возможно, ваш запрос не разрешен системой безопасности Openai.")
-                return
-        
-            buttons = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("Retry", callback_data='retry'),
-                    InlineKeyboardButton("Another prompt", callback_data='another_prompt'),
-                    InlineKeyboardButton("Cancel", callback_data='cancel')
-                ]
-            ])
-            await update.message.chat.send_action(action="upload_photo")
-            await update.message.reply_photo(image_url, caption=prompt, reply_markup=buttons)
-            return
+            await query.message.reply_text("Что-то пошло не так во время генерации изображения. Возможно, ваш запрос не разрешен системой безопасности Openai.")
+        else:
+            await query.message.edit_media(
+                media=InputMediaPhoto(media=image_url, caption=caption),
+                reply_markup=reply_markup
+            )
+    
+    elif user_response == 'new_prompt':
+        # prompt user to enter new caption
+        await query.message.edit_text(text='Введите новый запрос:')
+        return FIRST
+    
+    elif user_response == 'cancel':
+        # end the conversation
+        await query.message.edit_text(text='Разговор завершен.')
+        return ConversationHandler.END
 
-        try:
-            response = await update.callback_query_handler(callback_query_handler, timeout=60)
-            
-            if response == "retry":
-                image_url = None
-            elif response == "another_prompt":
-                await update.callback_query.edit_message_text(text="Введите запрос...")
-                return FIRST
-            else:
-                await update.callback_query.edit_message_text(text="До свидания!")
-                return ConversationHandler.END
-        except asyncio.TimeoutError:
-            await update.callback_query.edit_message_text(text="Время ожидания истекло, попробуйте еще раз.")
-            image_url = None
-
-
-async def callback_query_handler(update: Update, context: CallbackContext):
-    query = update.callback_query.data
-    await update.callback_query.answer()
-    return query
     
 async def caption_image(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
