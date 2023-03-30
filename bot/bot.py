@@ -310,8 +310,8 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     await update.message.reply_photo(image_url, caption=caption, reply_markup=reply_markup)
  
     # add callback query handler for the inline keyboard
-   # query_handler = CallbackQueryHandler(button_click_handle)
-   # context.dispatcher.add_handler(query_handler)
+    query_handler = CallbackQueryHandler(button_click_handle)
+    context.dispatcher.add_handler(query_handler)
 
     return ConversationHandler.END
 
@@ -572,7 +572,7 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
   #  application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
     application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={FIRST: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]},fallbacks=[]))
-    application.add_handler(CallbackQueryHandler(button_click_handle, pattern=r"^image_generate"))
+   # application.add_handler(CallbackQueryHandler(button_click_handle, pattern=r"^image_generate"))
     
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
