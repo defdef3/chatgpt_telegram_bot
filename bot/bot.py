@@ -300,22 +300,31 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     
     # create inline keyboard with buttons for user interaction
 
-    keyboard = [[InlineKeyboardButton('Retry', callback_data='retry')],
-                [InlineKeyboardButton('Another prompt', callback_data='new_prompt')],
-                [InlineKeyboardButton('Cancel', callback_data='cancel')]]
+    keyboard = [[InlineKeyboardButton('Reimagine', callback_data='image_generate|reimagine')],
+                [InlineKeyboardButton('Another prompt', callback_data='image_generate|new_prompt')],
+                [InlineKeyboardButton('Cancel', callback_data='image_generate|cancel')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     
     # send image with inline keyboard
     await update.message.reply_photo(image_url, caption=caption, reply_markup=reply_markup)
+ 
+    # add callback query handler for the inline keyboard
+   # query_handler = CallbackQueryHandler(button_click_handle)
+   # context.dispatcher.add_handler(query_handler)
+
     return ConversationHandler.END
 
 async def button_click_handle(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
+    user_id = update.callback_query.from_user.id
+
     query = update.callback_query
-    user_response =  query.data
+    await query.answer()
+    user_response = query.data.split("|")
     
     # handle button click based on user response
-    if user_response == 'retry':
+    if user_response == 'reimagine':
         # generate image with same caption
         caption = " ".join(context.args)
         image_url = await openai_utils.generate_image(caption)
@@ -335,7 +344,7 @@ async def button_click_handle(update: Update, context: CallbackContext):
     
     elif user_response == 'cancel':
         # end the conversation
-        await query.message.reply_text('Вы отменили обработку запроса.')
+        await query.message.reply_text('Вы отменили обработку вашего запроса.')
         return ConversationHandler.END
 
     
@@ -563,6 +572,8 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
   #  application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
     application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={FIRST: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]},fallbacks=[]))
+    application.add_handler(CallbackQueryHandler(button_click_handle, pattern=r"^image_generate"))
+    
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
     application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
