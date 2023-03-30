@@ -578,7 +578,8 @@ def run_bot() -> None:
             SECOND: [CallbackQueryHandler(button_click_handle, pattern="^image_generate")],
         },
         fallbacks=[],
-    )
+    ))
+
 
    # application.add_handler(CallbackQueryHandler(button_click_handle, pattern=r"^image_generate"))
     
