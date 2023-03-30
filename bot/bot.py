@@ -572,7 +572,7 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
   #  application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
-    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={FIRST: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]  SECOND: [CallbackQueryHandler(button_click_handle, pattern="^image_generate"),},fallbacks=[]))
+    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={FIRST: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)],  SECOND: [CallbackQueryHandler(button_click_handle, pattern="^image_generate")]},fallbacks=[]))
    # application.add_handler(CallbackQueryHandler(button_click_handle, pattern=r"^image_generate"))
     
 
