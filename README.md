@@ -81,6 +81,7 @@ If you want to add payments to your bot – write me on Telegram ([@karfly](http
     ```
 5. Apply changes:
     ```bash
+    docker-compose build
     docker-compose restart
     ```
 
