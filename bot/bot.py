@@ -40,7 +40,7 @@ db = database.Database()
 logger = logging.getLogger(__name__)
 user_semaphores = {}
 
-FIRST = range(1)
+FIRST, SECOND = range(2)
 
 
 HELP_MESSAGE = """Комманды:
@@ -300,18 +300,19 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     
     # create inline keyboard with buttons for user interaction
 
-    keyboard = [[InlineKeyboardButton('Reimagine', callback_data='image_generate|reimagine')],
-                [InlineKeyboardButton('Another prompt', callback_data='image_generate|new_prompt')],
-                [InlineKeyboardButton('Cancel', callback_data='image_generate|cancel')]]
+    keyboard = [[InlineKeyboardButton('Reimagine', callback_data=f"image_generate|reimagine")],
+                [InlineKeyboardButton('Another prompt', callback_data=f"image_generate|new_prompt")],
+                [InlineKeyboardButton('Cancel', callback_data=f"image_generate|cancel")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     
     # send image with inline keyboard
     await update.message.reply_photo(image_url, caption=caption, reply_markup=reply_markup)
- 
+    return SECOND
+
     # add callback query handler for the inline keyboard
-    query_handler = CallbackQueryHandler(button_click_handle)
-    context.dispatcher.add_handler(query_handler)
+   # query_handler = CallbackQueryHandler(button_click_handle)
+   # context.dispatcher.add_handler(query_handler)
 
     return ConversationHandler.END
 
@@ -546,7 +547,7 @@ async def post_init(application: Application):
     await application.bot.set_my_commands([
         BotCommand("/new", "Начать новый диалог"),
         BotCommand("/mode", "Выбрать роль"),
-        BotCommand("/image", "Генерация картинок Dalle2"),
+        BotCommand("/image", "Генерация картинок Dalle"),
         BotCommand("/retry", "Повторный запрос ответа на предыдущий запрос"),
         BotCommand("/settings", "Настройки"),
       #  BotCommand("/help", "Помощь"),
@@ -571,7 +572,7 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
   #  application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
-    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={FIRST: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]},fallbacks=[]))
+    application.add_handler(ConversationHandler(entry_points=[CommandHandler("image", image_generation_handle)],states={FIRST: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)]  SECOND: [CallbackQueryHandler(button_click_handle, pattern="^image_generate"),},fallbacks=[]))
    # application.add_handler(CallbackQueryHandler(button_click_handle, pattern=r"^image_generate"))
     
 
