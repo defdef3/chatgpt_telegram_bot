@@ -299,10 +299,12 @@ async def image_generation_handle(update: Update, context: CallbackContext):
         return
     
     # create inline keyboard with buttons for user interaction
+
     keyboard = [[InlineKeyboardButton('Retry', callback_data='retry')],
                 [InlineKeyboardButton('Another prompt', callback_data='new_prompt')],
                 [InlineKeyboardButton('Cancel', callback_data='cancel')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     
     # send image with inline keyboard
     await update.message.reply_photo(image_url, caption=caption, reply_markup=reply_markup)
@@ -310,30 +312,30 @@ async def image_generation_handle(update: Update, context: CallbackContext):
 
 async def button_click_handle(update: Update, context: CallbackContext):
     query = update.callback_query
-    user_response = query.data
+    user_response =  query.data
     
     # handle button click based on user response
     if user_response == 'retry':
         # generate image with same caption
-        caption = query.message.caption
+        caption = " ".join(context.args)
         image_url = await openai_utils.generate_image(caption)
         
         if image_url is None:
             await query.message.reply_text("Что-то пошло не так во время генерации изображения. Возможно, ваш запрос не разрешен системой безопасности Openai.")
         else:
-            await query.message.edit_media(
+            await query.message.reply_photo(
                 media=InputMediaPhoto(media=image_url, caption=caption),
                 reply_markup=reply_markup
             )
     
     elif user_response == 'new_prompt':
         # prompt user to enter new caption
-        await query.message.edit_text(text='Введите новый запрос:')
+        await query.message.reply_text(text='Введите новый запрос:')
         return FIRST
     
     elif user_response == 'cancel':
         # end the conversation
-        await query.message.edit_text(text='Разговор завершен.')
+        await query.message.reply_text('Вы отменили обработку запроса.')
         return ConversationHandler.END
 
     
