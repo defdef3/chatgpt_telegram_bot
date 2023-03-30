@@ -314,7 +314,6 @@ async def image_generation_handle(update: Update, context: CallbackContext):
    # query_handler = CallbackQueryHandler(button_click_handle)
    # context.dispatcher.add_handler(query_handler)
 
-    return ConversationHandler.END
 
 async def button_click_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
