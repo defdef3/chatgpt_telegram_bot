@@ -63,7 +63,7 @@ class ChatGPT:
 
     async def send_message_stream(self, message, dialog_messages=[], chat_mode="assistant"):
         if chat_mode not in CHAT_MODES.keys():
-            raise ValueError(f"Chat mode {chat_mode} is not supported")
+            raise ValueError(f"Режим {chat_mode} не поддерживается")
 
         n_dialog_messages_before = len(dialog_messages)
         answer = None
@@ -111,7 +111,6 @@ class ChatGPT:
                 # forget first message in dialog_messages
                 dialog_messages = dialog_messages[1:]
 
-        n_first_dialog_messages_removed = n_dialog_messages_before - len(dialog_messages)
 
         yield "finished", answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed  # sending final answer
 
