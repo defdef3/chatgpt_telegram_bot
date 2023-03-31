@@ -460,7 +460,7 @@ def get_settings_menu(user_id: int):
     for score_key, score_value in score_dict.items():
         text += "🟢" * score_value + "⚪️" * (5 - score_value) + f" – {score_key}\n\n"
 
-    text += "\nSelect <b>model</b>:"
+    text += "\nВыберите <b>model</b>:"
 
     # buttons to choose models
     buttons = []
@@ -521,7 +521,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     n_used_tokens_dict = db.get_user_attribute(user_id, "n_used_tokens")
     n_transcribed_seconds = db.get_user_attribute(user_id, "n_transcribed_seconds")
 
-    details_text = "🏷️ Details:\n"
+    details_text = "🏷️ Подробности:\n"
     for model_key in sorted(n_used_tokens_dict.keys()):
         n_input_tokens, n_output_tokens = n_used_tokens_dict[model_key]["n_input_tokens"], n_used_tokens_dict[model_key]["n_output_tokens"]
         total_n_used_tokens += n_input_tokens + n_output_tokens
@@ -577,11 +577,11 @@ async def error_handle(update: Update, context: CallbackContext) -> None:
 
 async def post_init(application: Application):
     await application.bot.set_my_commands([
-        BotCommand("/new", "Начать новый диалог"),
-        BotCommand("/mode", "Выбрать роль"),
-        BotCommand("/image", "Генерация картинок Dalle"),
+        BotCommand("/new", "Новый диалог"),
+        BotCommand("/mode", "Выбрать роль бота"),
+        BotCommand("/image", "Генерация фото Dall-e"),
         BotCommand("/retry", "Повторный запрос ответа на предыдущий запрос"),
-        BotCommand("/settings", "Настройки"),
+      #  BotCommand("/settings", "Настройки"),
       #  BotCommand("/help", "Помощь"),
     ])
 
