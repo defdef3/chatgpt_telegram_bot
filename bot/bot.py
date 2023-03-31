@@ -38,9 +38,11 @@ import openai_utils
 # setup
 db = database.Database()
 logger = logging.getLogger(__name__)
-user_semaphores = {}
 
-FIRST, SECOND = range(2)
+user_semaphores = {}
+user_tasks = {}
+
+FIRST = range(1)
 
 
 HELP_MESSAGE = """Комманды:
@@ -101,10 +103,10 @@ async def start_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
     db.start_new_dialog(user_id)
     
-    reply_text = "Hi! I'm <b>ChatGPT</b> bot implemented with GPT-3.5 OpenAI API 🤖\n\n"
+    reply_text = "Привет! Я <b>ChatGPT</b> бот, реализованный с помощью GPT OpenAI API 🤖\n\n"
     reply_text += HELP_MESSAGE
 
-    reply_text += "\nAnd now... ask me anything!"
+    reply_text += "\nА теперь... спросите меня о чем угодно!"
     
     await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
 
@@ -144,16 +146,21 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     if await is_previous_message_not_answered_yet(update, context): return
 
     user_id = update.message.from_user.id
-    chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
+    async def message_handle_fn():
+        chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
     
-    async with user_semaphores[user_id]:
+
         # new dialog timeout
         if use_new_dialog_timeout:
             if (datetime.now() - db.get_user_attribute(user_id, "last_interaction")).seconds > config.new_dialog_timeout and len(db.get_dialog_messages(user_id)) > 0:
                 db.start_new_dialog(user_id)
-                await update.message.reply_text(f"Запуск нового диалога из-за тайм-аута (<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> режим) ✅", parse_mode=ParseMode.HTML)
+                await update.message.reply_text(f"Запуск нового диалога из-за тайм-аута (<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> роль) ✅", parse_mode=ParseMode.HTML)
         db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
+        # in case of CancelledError
+        n_input_tokens, n_output_tokens = 0, 0
+        current_model = db.get_user_attribute(user_id, "current_model")
+        
         try:
             # send placeholder message to user
             placeholder_message = await update.message.reply_text("...")
@@ -161,9 +168,9 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
             # send typing action
             await update.message.chat.send_action(action="typing")
 
-            message = message or update.message.text
+            _message = message or update.message.text
 
-            current_model = db.get_user_attribute(user_id, "current_model")
+
             dialog_messages = db.get_dialog_messages(user_id, dialog_id=None)
             parse_mode = {
                 "html": ParseMode.HTML,
@@ -172,10 +179,10 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
 
             chatgpt_instance = openai_utils.ChatGPT(model=current_model)
             if config.enable_message_streaming:
-                gen = chatgpt_instance.send_message_stream(message, dialog_messages=dialog_messages, chat_mode=chat_mode)
+                gen = chatgpt_instance.send_message_stream(_message, dialog_messages=dialog_messages, chat_mode=chat_mode)
             else:
                 answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed = await chatgpt_instance.send_message(
-                    message,
+                    _message,
                     dialog_messages=dialog_messages,
                     chat_mode=chat_mode
                 )
@@ -187,13 +194,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
 
             prev_answer = ""
             async for gen_item in gen:
-                status = gen_item[0]
-                if status == "not_finished":
-                    status, answer = gen_item
-                elif status == "finished":
-                    status, answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed = gen_item
-                else:
-                    raise ValueError(f"Состояние потокового вещания {status} неизвестно")
+                status, answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed = gen_item
 
                 answer = answer[:4096]  # telegram message limit
 
@@ -214,7 +215,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
                 prev_answer = answer
 
             # update user data
-            new_dialog_message = {"user": message, "bot": answer, "date": datetime.now()}
+            new_dialog_message = {"user": _message, "bot": answer, "date": datetime.now()}
             db.set_dialog_messages(
                 user_id,
                 db.get_dialog_messages(user_id, dialog_id=None) + [new_dialog_message],
@@ -222,6 +223,12 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
             )
 
             db.update_n_used_tokens(user_id, current_model, n_input_tokens, n_output_tokens)
+            
+        except asyncio.CancelledError:
+            # note: intermediate token updates only work when enable_message_streaming=True (config.yml)
+            db.update_n_used_tokens(user_id, current_model, n_input_tokens, n_output_tokens)
+            raise
+            
         except Exception as e:
             error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
             logger.error(error_text)
@@ -231,18 +238,32 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         # send message if some messages were removed from the context
         if n_first_dialog_messages_removed > 0:
             if n_first_dialog_messages_removed == 1:
-                text = "✍️ <i>Note:</i> Your current dialog is too long, so your <b>first message</b> was removed from the context.\n Send /new command to start new dialog"
+                text = "✍️ <i>Note:</i> Ваш текущий диалог слишком длинный, поэтому ваше <b>первое сообщение</b> было удалено из контекста.\n Отправьте /new для запуска нового диалога"
             else:
-                text = f"✍️ <i>Note:</i> Your current dialog is too long, so <b>{n_first_dialog_messages_removed} first messages</b> were removed from the context.\n Send /new command to start new dialog"
+                text = f"✍️ <i>Note:</i> Ваш текущий диалог слишком длинный, поэтому <b>{n_first_dialog_messages_removed} первые сообщения</b> были удалены из контекста.\n Отправьте /new для запуска нового диалога"
             await update.message.reply_text(text, parse_mode=ParseMode.HTML)
             
+    async with user_semaphores[user_id]:
+        task = asyncio.create_task(message_handle_fn())
+        user_tasks[user_id] = task
+
+        try:
+            await task
+        except asyncio.CancelledError:
+            await update.message.reply_text("✅ Отменено", parse_mode=ParseMode.HTML)
+        else:
+            pass
+        finally:
+            if user_id in user_tasks:
+                del user_tasks[user_id]
             
 async def is_previous_message_not_answered_yet(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
 
     user_id = update.message.from_user.id
     if user_semaphores[user_id].locked():
-        text = "⏳ Пожалуйста, <b>подождите</b> ответа на предыдущее сообщение"
+        text = "⏳ Пожалуйста, <b>подождите</b> ответа на предыдущее сообщение\n"
+        text += "Или отмените /cancel"
         await update.message.reply_text(text, reply_to_message_id=update.message.id, parse_mode=ParseMode.HTML)
         return True
     else:
@@ -300,19 +321,20 @@ async def image_generation_handle(update: Update, context: CallbackContext):
     
     # create inline keyboard with buttons for user interaction
 
-    keyboard = [[InlineKeyboardButton('Reimagine', callback_data=f"image_generate|reimagine")],
-                [InlineKeyboardButton('Another prompt', callback_data=f"image_generate|new_prompt")],
-                [InlineKeyboardButton('Cancel', callback_data=f"image_generate|cancel")]]
+    keyboard = [[InlineKeyboardButton('Еще вариант', callback_data=f"image_generate|reimagine")],
+                [InlineKeyboardButton('Новый запрос', callback_data=f"image_generate|new_prompt")],
+                [InlineKeyboardButton('Отмена', callback_data=f"image_generate|cancel2")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     
     # send image with inline keyboard
+    await update.message.chat.send_action(action="upload_photo")
     await update.message.reply_photo(image_url, caption=caption, reply_markup=reply_markup)
-    return SECOND
+
 
     # add callback query handler for the inline keyboard
-   # query_handler = CallbackQueryHandler(button_click_handle)
-   # context.dispatcher.add_handler(query_handler)
+    query_handler = CallbackQueryHandler(button_click_handle)
+    context.dispatcher.add_handler(query_handler)
 
 
 async def button_click_handle(update: Update, context: CallbackContext):
@@ -342,7 +364,7 @@ async def button_click_handle(update: Update, context: CallbackContext):
         await query.message.reply_text(text='Введите новый запрос:')
         return FIRST
     
-    elif user_response == 'cancel':
+    elif user_response == 'cancel2':
         # end the conversation
         await query.message.reply_text('Вы отменили обработку вашего запроса.')
         return ConversationHandler.END
@@ -353,14 +375,14 @@ async def caption_image(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
     caption = update.message.text
-    await update.message.chat.send_action(action="typing")
+    
     try:
         caption = update.message.text
     except Exception as e:
         error_text = f"Что-то пошло не так во время завершения. Причина: {e}"
         logger.error(error_text)
         await update.message.reply_text(error_text)
-        
+    await update.message.chat.send_action(action="typing")    
     image_url = await openai_utils.generate_image(caption)
 
     if image_url is None:
@@ -387,6 +409,17 @@ async def new_dialog_handle(update: Update, context: CallbackContext):
     chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
     await update.message.reply_text(f"{openai_utils.CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
 
+async def cancel_handle(update: Update, context: CallbackContext):
+    await register_user_if_not_exists(update, context, update.message.from_user)
+
+    user_id = update.message.from_user.id
+    db.set_user_attribute(user_id, "last_interaction", datetime.now())
+
+    if user_id in user_tasks:
+        task = user_tasks[user_id]
+        task.cancel()
+    else:
+        await update.message.reply_text("<i>Нечего отменять...</i>", parse_mode=ParseMode.HTML)
 
 async def show_chat_modes_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
@@ -575,7 +608,6 @@ def run_bot() -> None:
         entry_points=[CommandHandler("image", image_generation_handle)],
         states={
             FIRST: [MessageHandler(filters.TEXT & ~filters.COMMAND, caption_image)],
-            SECOND: [CallbackQueryHandler(button_click_handle, pattern="^image_generate")],
         },
         fallbacks=[],
     ))
@@ -587,6 +619,7 @@ def run_bot() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
     application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
     application.add_handler(CommandHandler("new", new_dialog_handle, filters=user_filter))
+    application.add_handler(CommandHandler("cancel", cancel_handle, filters=user_filter))
 
     application.add_handler(MessageHandler(filters.VOICE & user_filter, voice_message_handle))
     
