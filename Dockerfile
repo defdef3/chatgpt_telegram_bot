@@ -8,13 +8,16 @@ ENV PIP_NO_CACHE_DIR=off
 ENV PIP_DISABLE_PIP_VERSION_CHECK=on
 ENV PIP_DEFAULT_TIMEOUT=100
 
-RUN apt-get install -y python3 python3-pip python-dev build-essential python3-venv ffmpeg
+RUN set -x && \
+    apt-get -qq update && \
+    apt-get -qq install -y build-essential ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /code/bot /code/config
 ADD . /code
 WORKDIR /code
 
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 VOLUME ./bot:/code/bot
 VOLUME ./config:/code/config
