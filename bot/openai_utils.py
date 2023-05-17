@@ -55,7 +55,8 @@ class ChatGPT:
                     raise ValueError("Dialog messages is reduced to zero, but still has too many tokens to make completion") from e
 
                 # forget first message in dialog_messages
-                dialog_messages = dialog_messages[1:]
+                elif len(dialog_messages) >= 20:
+                    dialog_messages = dialog_messages[1:]
 
         n_first_dialog_messages_removed = n_dialog_messages_before - len(dialog_messages)
 
@@ -109,7 +110,8 @@ class ChatGPT:
                     raise e
 
                 # forget first message in dialog_messages
-                dialog_messages = dialog_messages[1:]
+                elif len(dialog_messages) >= 20:
+                    dialog_messages = dialog_messages[1:]
 
 
         yield "finished", answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed  # sending final answer
