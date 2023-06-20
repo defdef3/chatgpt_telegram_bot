@@ -28,7 +28,7 @@ info:
  #     Cheap: 2
 
   gpt-3.5-turbo-16k-0613:
-    type: completion
+    type: chat_completion
     name: gpt-3.5-turbo-16k-0613
     description: gpt-3.5-turbo-16k-0613 поддерживает плагины. 
 
@@ -37,7 +37,7 @@ info:
 
     scores:
       Smart: 3
-      Fast: 2
+      Fast: 5
 #      Cheap: 3
 
   whisper:
