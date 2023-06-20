@@ -1,10 +1,10 @@
-available_text_models: ["gpt-3.5-turbo", "gpt-4", "text-davinci-003"]
+available_text_models: ["gpt-3.5-turbo", "gpt-4", "gpt-3.5-turbo-16k-0613"]
 
 info:
   gpt-3.5-turbo:
     type: chat_completion
     name: gpt-3.5-turbo
-    description: ChatGPT - это та самая известная модель. Она <b>быстрая</b>. Идеально подходит для выполнения повседневных задач. Если есть какие-то задачи, с которыми он не может справиться, попробуйте воспользоваться функцией <b>GPT-4</b>.
+    description: gpt-3.5-turbo <b>НЕ</b> поддерживает плагины.
 
     price_per_1000_input_tokens: 0.000
     price_per_1000_output_tokens: 0.000
@@ -27,10 +27,10 @@ info:
       Fast: 2
  #     Cheap: 2
 
-  text-davinci-003:
+  gpt-3.5-turbo-16k-0613:
     type: completion
-    name: text-davinci-003
-    description: text-davinci-003 является устаревшей моделью. 
+    name: gpt-3.5-turbo-16k-0613
+    description: gpt-3.5-turbo-16k-0613 поддерживает плагины. 
 
     price_per_1000_input_tokens: 0.00
     price_per_1000_output_tokens: 0.00
