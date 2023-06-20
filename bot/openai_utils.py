@@ -3,10 +3,7 @@ import config
 import tiktoken
 import openai
 openai.api_key = config.openai_api_key
-
-
 CHAT_MODES = config.chat_modes
-
 OPENAI_COMPLETION_OPTIONS = {
     "temperature": 0.7,
     "max_tokens": 1024,
@@ -14,8 +11,6 @@ OPENAI_COMPLETION_OPTIONS = {
     "frequency_penalty": 0.5,
     "presence_penalty": 0
 }
-
-
 class ChatGPT:
     def __init__(self, model="gpt-3.5-turbo"):
         assert model in {"text-davinci-003", "gpt-3.5-turbo", "gpt-4"}, f"Unknown model: {model}"
@@ -69,49 +64,40 @@ class ChatGPT:
         n_dialog_messages_before = len(dialog_messages)
         answer = None
         while answer is None:
-            try:
-                if self.model in {"gpt-3.5-turbo", "gpt-4"}:
-                    messages = self._generate_prompt_messages(message, dialog_messages, chat_mode)
-                    r_gen = await openai.ChatCompletion.acreate(
-                        model=self.model,
-                        messages=messages,
-                        stream=True,
-                        **OPENAI_COMPLETION_OPTIONS
-                    )
+            retry = True
+            while retry:
+                try:
+                    if self.model in {"gpt-3.5-turbo", "gpt-4"}:
+                        messages = self._generate_prompt_messages(message, dialog_messages, chat_mode)
+                        r_gen = await openai.ChatCompletion.acreate(
+                            model=self.model,
+                            messages=messages,
+                            stream=True,
+                            **OPENAI_COMPLETION_OPTIONS
+                        )
 
-                    answer = ""
-                    async for r_item in r_gen:
-                        delta = r_item.choices[0].delta
-                        if "content" in delta:
-                            answer += delta.content
-                            n_input_tokens, n_output_tokens = self._count_tokens_from_messages(messages, answer, model=self.model)
-                            n_first_dialog_messages_removed = n_dialog_messages_before - len(dialog_messages)
-                            yield "not_finished", answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed
-                elif self.model == "text-davinci-003":
-                    prompt = self._generate_prompt(message, dialog_messages, chat_mode)
-                    r_gen = await openai.Completion.acreate(
-                        engine=self.model,
-                        prompt=prompt,
-                        stream=True,
-                        **OPENAI_COMPLETION_OPTIONS
-                    )
-                    
-                    answer = ""
-                    async for r_item in r_gen:
-                        answer += r_item.choices[0].text
-                        n_input_tokens, n_output_tokens = self._count_tokens_from_prompt(prompt, answer, model=self.model)
-                        n_first_dialog_messages_removed = n_dialog_messages_before - len(dialog_messages)
-                        yield "not_finished", answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed
+                        answer = ""
+                        async for r_item in r_gen:
+                            delta = r_item.choices[0].delta
+                            if "content" in delta:
+                                answer += delta.content
+                                n_input_tokens, n_output_tokens = self._count_tokens_from_messages(messages, answer, model=self.model)
+                                n_first_dialog_messages_removed = n_dialog_messages_before - len(dialog_messages)
+                                yield "not_finished", answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed
 
-                answer = self._postprocess_answer(answer)
+
+                    answer = self._postprocess_answer(answer)
+                    retry = False
                 
-            except openai.error.InvalidRequestError as e:  # too many tokens
-                if len(dialog_messages) == 0:
-                    raise e
+                except openai.error.InvalidRequestError as e:  # too many tokens
+                    if len(dialog_messages) == 0:
+                        raise e
 
-                # forget first message in dialog_messages
-                elif len(dialog_messages) >= 20:
+                    # forget first message in dialog_messages
                     dialog_messages = dialog_messages[1:]
+                except Exception as e:
+                        if str(e).startswith("В настоящее время модель перегружена другими запросами"):
+                            retry = True
 
 
         yield "finished", answer, (n_input_tokens, n_output_tokens), n_first_dialog_messages_removed  # sending final answer
